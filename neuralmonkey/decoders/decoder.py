@@ -111,10 +111,11 @@ class Decoder(object):
         ### Use the same variables for runtime decoding!
         tf.get_variable_scope().reuse_variables()
 
-        self.runtime_rnn_outputs, _ = attention_decoder(
-            runtime_inputs, state, attention_objects, cell,
-            attention_maxout_size, loop_function=loop_function,
-            summary_collections=["summary_val_plots"])
+        self.runtime_rnn_outputs, _, self.runtime_alignments = \
+            attention_decoder(
+                runtime_inputs, state, attention_objects, cell,
+                attention_maxout_size, loop_function=loop_function,
+                summary_collections=["summary_val_plots"], get_alignments=True)
 
         val_plots_collection = tf.get_collection("summary_val_plots")
         self.summary_val_plots = (

@@ -15,7 +15,7 @@ from neuralmonkey.nn.projection import maxout, linear
 # Great functions require great number of parameters
 def attention_decoder(decoder_inputs, initial_state, attention_objects,
                       cell, maxout_size, loop_function=None, scope=None,
-                      summary_collections=None):
+                      summary_collections=None, get_alignments=False):
     outputs = []
     states = []
 
@@ -48,17 +48,24 @@ def attention_decoder(decoder_inputs, initial_state, attention_objects,
             outputs.append(output)
             states.append(state)
 
-        if summary_collections:
-            for i, a in enumerate(attention_objects):
+        all_alignments = [None for _ in attention_objects]
+
+        for i, a in enumerate(attention_objects):
+            if summary_collections or get_alignments:
                 attentions = a.attentions_in_time[-len(decoder_inputs):]
-                alignments = tf.expand_dims(tf.transpose(
-                    tf.pack(attentions), perm=[1, 2, 0]), -1)
+                alignments = tf.transpose(tf.pack(attentions), perm=[1, 2, 0])
+                all_alignments[i] = alignments
 
-                tf.image_summary("attention_{}".format(i), alignments,
-                                 collections=summary_collections,
-                                 max_images=256)
+                if summary_collections:
+                    alignment_imgs = tf.expand_dims(alignments, -1)
+                    tf.image_summary("attention_{}".format(i), alignment_imgs,
+                                     collections=summary_collections,
+                                     max_images=256)
 
-    return outputs, states
+    if get_alignments:
+        return outputs, states, all_alignments
+    else:
+        return outputs, states
 
 
 def decode_step(prev_output, prev_state, attention_objects,
