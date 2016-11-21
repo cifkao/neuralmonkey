@@ -227,11 +227,13 @@ def training_loop(sess, saver,
                             sess, runner, all_coders, decoder, val_dataset,
                             evaluators, postprocess, write_out=False,
                             extra_fetches=(decoder.summary_val_plots,
-                                           decoder.runtime_alignments))
+                                           decoder.runtime_alignments,
+                                           all_coders[0].weight_ins))
 
-                    val_plots, val_alignments = zip(*extras)
+                    val_plots, val_alignments, val_in_weights = zip(*extras)
 
                     val_alignments = [a for batch in val_alignments[0] for a in batch]
+                    val_in_lengths =  [round(float(sum(a))) for batch in [list(zip(*batch)) for batch in val_in_weights] for a in batch]
 
 
                     this_score = val_evaluation[evaluators[-1].name]
@@ -292,12 +294,13 @@ def training_loop(sess, saver,
 
                     log_print("")
                     log_print("Examples:")
-                    for sent, sent_raw, ref_sent, ref_sent_raw, ali in zip(
+                    for sent, sent_raw, ref_sent, ref_sent_raw, ali, len_in in zip(
                             decoded_val_sentences[:15],
                             decoded_raw_val_sentences,
                             val_tgt_sentences,
                             val_raw_tgt_sentences,
-                            val_alignments):
+                            val_alignments,
+                            val_in_lengths):
 
                         if isinstance(sent, list):
                             log_print("      raw: {}"
@@ -315,7 +318,7 @@ def training_loop(sess, saver,
                             "     ref.: {}".format(" ".join(ref_sent)),
                             color="magenta"))
 
-                        log_print(ali)
+                        log_print(ali[:len_in,:len(sent_raw)+1])
 
                     log_print("")
 
