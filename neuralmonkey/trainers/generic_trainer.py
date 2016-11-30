@@ -74,6 +74,8 @@ class GenericTrainer(object):
             tf.get_collection("summary_gradients"))
         self.scalar_summaries = tf.merge_summary(
             tf.get_collection("summary_train"))
+        self.image_summaries = tf.merge_summary(
+            tf.get_collection("summary_val_plots"))
 
     def _get_gradients(self, tensor: tf.Tensor) -> Gradients:
         gradient_list = self.optimizer.compute_gradients(tensor)
@@ -85,7 +87,8 @@ class GenericTrainer(object):
                                self.train_op,
                                self.losses,
                                self.scalar_summaries if summaries else None,
-                               self.histogram_summaries if summaries else None)
+                               self.histogram_summaries if summaries else None,
+                               self.image_summaries if summaries else None)
 
 
 def _sum_gradients(gradients_list: List[Gradients]) -> Gradients:
@@ -103,12 +106,13 @@ def _sum_gradients(gradients_list: List[Gradients]) -> Gradients:
 class TrainExecutable(Executable):
 
     def __init__(self, all_coders, train_op, losses, scalar_summaries,
-                 histogram_summaries):
+                 histogram_summaries, image_summaries):
         self.all_coders = all_coders
         self.train_op = train_op
         self.losses = losses
         self.scalar_summaries = scalar_summaries
         self.histogram_summaries = histogram_summaries
+        self.image_summaries = image_summaries
 
         self.result = None
 
@@ -117,6 +121,7 @@ class TrainExecutable(Executable):
         if self.scalar_summaries is not None:
             fetches['scalar_summaries'] = self.scalar_summaries
             fetches['histogram_summaries'] = self.histogram_summaries
+            fetches['image_summaries'] = self.image_summaries
         fetches['losses'] = self.losses
 
         return self.all_coders, fetches, {}
@@ -125,10 +130,12 @@ class TrainExecutable(Executable):
         if self.scalar_summaries is None:
             scalar_summaries = None
             histogram_summaries = None
+            image_summaries = None
         else:
             # TODO collect summaries from different sessions
             scalar_summaries = results[0]['scalar_summaries']
             histogram_summaries = results[0]['histogram_summaries']
+            image_summaries = results[0]['image_summaries']
 
         losses_sum = [0. for _ in self.losses]
         for session_result in results:
@@ -141,4 +148,4 @@ class TrainExecutable(Executable):
             [], losses=avg_losses,
             scalar_summaries=scalar_summaries,
             histogram_summaries=histogram_summaries,
-            image_summaries=None)
+            image_summaries=image_summaries)
